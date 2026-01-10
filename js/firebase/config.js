@@ -11,12 +11,12 @@ let provider = null;
 const STORAGE_KEY = 'monochrome-firebase-config';
 
 const DEFAULT_CONFIG = {
-   apiKey: "AIzaSyDPU-unAjuLtQJt4IkGS5faG50UCF7lYyA",
-   authDomain: "monochrome-database.firebaseapp.com",
-   projectId: "monochrome-database",
-   storageBucket: "monochrome-database.firebasestorage.app",
-   messagingSenderId: "895657412760",
-   appId: "1:895657412760:web:e81c5044c7f4e9b799e8ed"
+  apiKey: "AIzaSyAYtdIV6qHozPfCdWxZXA6K-f0iBpXGpR8",
+  authDomain: "monochrome-sync-e4314.firebaseapp.com",
+  projectId: "monochrome-sync-e4314",
+  storageBucket: "monochrome-sync-e4314.firebasestorage.app",
+  messagingSenderId: "297029963376",
+  appId: "1:297029963376:web:ecbbe0efa3dc2d8dac6eb5"
 };
 
 
