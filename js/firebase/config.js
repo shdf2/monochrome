@@ -13,6 +13,7 @@ const STORAGE_KEY = 'monochrome-firebase-config';
 const DEFAULT_CONFIG = {
   apiKey: "AIzaSyAYtdIV6qHozPfCdWxZXA6K-f0iBpXGpR8",
   authDomain: "monochrome-sync-e4314.firebaseapp.com",
+  databaseURL: "https://monochrome-sync-e4314-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "monochrome-sync-e4314",
   storageBucket: "monochrome-sync-e4314.firebasestorage.app",
   messagingSenderId: "297029963376",
