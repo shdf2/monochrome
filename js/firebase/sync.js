@@ -1,6 +1,16 @@
 // js/firebase/sync.js
 import { database } from './config.js';
-import { ref, get, set, update, onValue, off, child, remove, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import {
+    ref,
+    get,
+    set,
+    update,
+    onValue,
+    off,
+    child,
+    remove,
+    runTransaction,
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 import { db } from '../db.js';
 
 export class SyncManager {
@@ -15,41 +25,47 @@ export class SyncManager {
         if (!database || !user) return;
         this.user = user;
         this.userRef = ref(database, `users/${user.uid}`);
-        
-        console.log("Initializing SyncManager for user:", user.uid);
+
+        console.log('Initializing SyncManager for user:', user.uid);
         this.performInitialSync();
     }
 
     disconnect() {
         if (this.userRef) {
             // Remove listeners
-            this.unsubscribeFunctions.forEach(unsub => unsub());
+            this.unsubscribeFunctions.forEach((unsub) => unsub());
             this.unsubscribeFunctions = [];
         }
         this.user = null;
         this.userRef = null;
-        console.log("SyncManager disconnected");
+        console.log('SyncManager disconnected');
     }
 
     async performInitialSync() {
         if (this.isSyncing) return;
         this.isSyncing = true;
-        
+
         try {
-            console.log("Starting initial sync...");
+            console.log('Starting initial sync...');
 
             // 1. Fetch Cloud Data
             const snapshot = await get(this.userRef);
             const cloudData = snapshot.val() || {};
+            const deletedPlaylists = cloudData.deleted_playlists || {};
 
             // 2. Fetch Local Data
             const localData = await db.exportData();
+
+            // Filter out deleted playlists from local data
+            if (localData.user_playlists && Array.isArray(localData.user_playlists)) {
+                localData.user_playlists = localData.user_playlists.filter((p) => !deletedPlaylists[p.id]);
+            }
 
             // 3. Merge Data (Union Strategy)
             const mergedData = this.mergeData(localData, cloudData);
 
             // 4. Update Cloud (if different)
-            // We optimize by just rewriting the whole node for simplicity in Phase 1, 
+            // We optimize by just rewriting the whole node for simplicity in Phase 1,
             // or we could diff. Rewriting is safer for "Initial Merge".
             await update(this.userRef, mergedData);
 
@@ -61,18 +77,17 @@ export class SyncManager {
                 favorites_artists: mergedData.library?.artists ? Object.values(mergedData.library.artists) : [],
                 favorites_playlists: mergedData.library?.playlists ? Object.values(mergedData.library.playlists) : [],
                 history_tracks: mergedData.history?.recentTracks ? Object.values(mergedData.history.recentTracks) : [],
-                user_playlists: mergedData.user_playlists ? Object.values(mergedData.user_playlists) : []
+                user_playlists: mergedData.user_playlists ? Object.values(mergedData.user_playlists) : [],
             };
 
             await db.importData(importData, true);
 
-            console.log("Initial sync complete.");
+            console.log('Initial sync complete.');
 
             // 6. Setup Listeners for future changes
             this.setupListeners();
-
         } catch (error) {
-            console.error("Initial sync failed:", error);
+            console.error('Initial sync failed:', error);
         } finally {
             this.isSyncing = false;
         }
@@ -87,18 +102,18 @@ export class SyncManager {
 
             // Add all local items
             if (Array.isArray(localItems)) {
-                localItems.forEach(item => map.set(item[idKey], item));
+                localItems.forEach((item) => map.set(item[idKey], item));
             } else if (localItems && typeof localItems === 'object') {
                 // Handle case where cloud stores as object keys
-                Object.values(localItems).forEach(item => map.set(item[idKey], item));
+                Object.values(localItems).forEach((item) => map.set(item[idKey], item));
             }
 
             // Add/Overwrite with cloud items (Union Strategy)
             if (cloudItems) {
                 if (Array.isArray(cloudItems)) {
-                    cloudItems.forEach(item => map.set(item[idKey], item));
+                    cloudItems.forEach((item) => map.set(item[idKey], item));
                 } else {
-                    Object.keys(cloudItems).forEach(key => {
+                    Object.keys(cloudItems).forEach((key) => {
                         const val = cloudItems[key];
                         if (typeof val === 'object') {
                             map.set(val[idKey] || key, val);
@@ -115,14 +130,20 @@ export class SyncManager {
                 tracks: this.arrayToObject(mergeStores(local.favorites_tracks, cloud.library?.tracks), 'id'),
                 albums: this.arrayToObject(mergeStores(local.favorites_albums, cloud.library?.albums), 'id'),
                 artists: this.arrayToObject(mergeStores(local.favorites_artists, cloud.library?.artists), 'id'),
-                playlists: this.arrayToObject(mergeStores(local.favorites_playlists, cloud.library?.playlists, 'uuid'), 'uuid')
+                playlists: this.arrayToObject(
+                    mergeStores(local.favorites_playlists, cloud.library?.playlists, 'uuid'),
+                    'uuid'
+                ),
             },
             history: {
-                recentTracks: this.arrayToObject(mergeStores(local.history_tracks, cloud.history?.recentTracks, 'timestamp'), 'timestamp')
+                recentTracks: this.arrayToObject(
+                    mergeStores(local.history_tracks, cloud.history?.recentTracks, 'timestamp'),
+                    'timestamp'
+                ),
             },
             user_playlists: this.arrayToObject(mergeStores(local.user_playlists, cloud.user_playlists), 'id'),
             // Settings are NOT synced (device specific)
-            lastUpdated: Date.now()
+            lastUpdated: Date.now(),
         };
 
         // Transform back to local structure for db.importData
@@ -132,7 +153,7 @@ export class SyncManager {
     // Helper to convert array to object with keys
     arrayToObject(arr, keyField) {
         const obj = {};
-        arr.forEach(item => {
+        arr.forEach((item) => {
             if (item && item[keyField]) {
                 obj[item[keyField]] = item;
             }
@@ -145,7 +166,7 @@ export class SyncManager {
         const libraryRef = child(this.userRef, 'library');
 
         const unsubLibrary = onValue(libraryRef, (snapshot) => {
-            if (this.isSyncing) return; 
+            if (this.isSyncing) return;
 
             const val = snapshot.val();
             if (val) {
@@ -153,7 +174,7 @@ export class SyncManager {
                     favorites_tracks: val.tracks ? Object.values(val.tracks) : [],
                     favorites_albums: val.albums ? Object.values(val.albums) : [],
                     favorites_artists: val.artists ? Object.values(val.artists) : [],
-                    favorites_playlists: val.playlists ? Object.values(val.playlists) : []
+                    favorites_playlists: val.playlists ? Object.values(val.playlists) : [],
                 };
                 db.importData(importData, true).then(() => {
                     // Notify UI to refresh
@@ -161,7 +182,7 @@ export class SyncManager {
                 });
             }
         });
-        
+
         this.unsubscribeFunctions.push(() => off(libraryRef, 'value', unsubLibrary));
 
         // Listen for changes in history
@@ -173,7 +194,7 @@ export class SyncManager {
             const val = snapshot.val();
             if (val) {
                 const importData = {
-                    history_tracks: Object.values(val)
+                    history_tracks: Object.values(val),
                 };
                 db.importData(importData, true).then(() => {
                     // Notify UI to refresh
@@ -193,7 +214,7 @@ export class SyncManager {
             const val = snapshot.val();
             if (val) {
                 const importData = {
-                    user_playlists: Object.values(val)
+                    user_playlists: Object.values(val),
                 };
                 db.importData(importData, true).then(() => {
                     // Notify UI to refresh library
@@ -215,10 +236,10 @@ export class SyncManager {
         // isAdded: boolean
 
         const categoryMap = {
-            'track': 'tracks',
-            'album': 'albums',
-            'artist': 'artists',
-            'playlist': 'playlists'
+            track: 'tracks',
+            album: 'albums',
+            artist: 'artists',
+            playlist: 'playlists',
         };
         const category = categoryMap[type];
         if (!category) return;
@@ -235,7 +256,7 @@ export class SyncManager {
             // we add it now. Ideally this matches local DB time, but a small diff is negligible.
             const entry = {
                 ...minified,
-                addedAt: item.addedAt || minified.addedAt || Date.now()
+                addedAt: item.addedAt || minified.addedAt || Date.now(),
             };
             await set(itemRef, entry);
         } else {
@@ -250,7 +271,7 @@ export class SyncManager {
         try {
             await set(itemRef, track);
         } catch (error) {
-            console.error("Failed to sync history item:", error);
+            console.error('Failed to sync history item:', error);
         }
     }
 
@@ -263,14 +284,20 @@ export class SyncManager {
 
         if (action === 'create' || action === 'update') {
             await set(itemRef, playlist);
+            // Ensure it's not in deleted_playlists (just in case)
+            const deletedRef = child(this.userRef, `deleted_playlists/${id}`);
+            await remove(deletedRef);
         } else if (action === 'delete') {
             await remove(itemRef);
+            // Add tombstone
+            const deletedRef = child(this.userRef, `deleted_playlists/${id}`);
+            await set(deletedRef, { timestamp: Date.now() });
         }
     }
 
     async clearCloudData() {
         if (!this.user || !this.userRef) {
-            throw new Error("Not authenticated");
+            throw new Error('Not authenticated');
         }
         await remove(this.userRef);
     }
@@ -278,12 +305,12 @@ export class SyncManager {
     // Public Playlist API
 
     async publishPlaylist(playlist) {
-        if (!this.user) throw new Error("Not authenticated");
+        if (!this.user) throw new Error('Not authenticated');
 
         const minified = db._minifyItem('playlist', playlist);
         const playlistId = playlist.id || playlist.uuid;
 
-        if (!playlistId) throw new Error("Invalid playlist ID");
+        if (!playlistId) throw new Error('Invalid playlist ID');
 
         // Ensure playlist has necessary data
         const publicData = {
@@ -291,7 +318,7 @@ export class SyncManager {
             uid: this.user.uid,
             originalId: playlistId,
             publishedAt: Date.now(),
-            tracks: playlist.tracks ? playlist.tracks.map(t => db._minifyItem('track', t)) : []
+            tracks: playlist.tracks ? playlist.tracks.map((t) => db._minifyItem('track', t)) : [],
         };
 
         // Use a global 'public_playlists' node
@@ -300,14 +327,14 @@ export class SyncManager {
     }
 
     async unpublishPlaylist(playlistId) {
-        if (!this.user) throw new Error("Not authenticated");
+        if (!this.user) throw new Error('Not authenticated');
         const publicRef = ref(database, `public_playlists/${playlistId}`);
         await remove(publicRef);
     }
 
     async getPublicPlaylist(playlistId) {
         if (!database) {
-            console.warn("[Sync] Database not initialized, cannot fetch public playlist");
+            console.warn('[Sync] Database not initialized, cannot fetch public playlist');
             return null;
         }
         try {
@@ -321,7 +348,7 @@ export class SyncManager {
             console.log(`[Sync] Public playlist fetch for ${playlistId}: Found`);
             return data;
         } catch (error) {
-            console.error("[Sync] Failed to fetch public playlist:", error);
+            console.error('[Sync] Failed to fetch public playlist:', error);
             return null;
         }
     }

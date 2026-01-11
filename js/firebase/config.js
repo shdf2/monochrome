@@ -1,7 +1,7 @@
 // js/firebase/config.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 let app = null;
 let auth = null;
@@ -19,9 +19,6 @@ const DEFAULT_CONFIG = {
   messagingSenderId: "297029963376",
   appId: "1:297029963376:web:ecbbe0efa3dc2d8dac6eb5"
 };
-
-
-
 
 function getStoredConfig() {
     try {
@@ -43,12 +40,12 @@ if (config) {
         auth = getAuth(app);
         database = getDatabase(app);
         provider = new GoogleAuthProvider();
-        console.log("Firebase initialized from " + (storedConfig ? "saved" : "default") + " config");
+        console.log('Firebase initialized from ' + (storedConfig ? 'saved' : 'default') + ' config');
     } catch (error) {
-        console.error("Error initializing Firebase:", error);
+        console.error('Error initializing Firebase:', error);
     }
 } else {
-    console.log("No Firebase config found.");
+    console.log('No Firebase config found.');
 }
 
 export function saveFirebaseConfig(configObj) {
@@ -174,12 +171,15 @@ export function initializeFirebaseSettingsUI() {
                 const config = JSON.parse(currentConfigStr);
                 const link = generateShareLink(config);
                 if (link) {
-                    navigator.clipboard.writeText(link).then(() => {
-                        alert('Magic Link copied to clipboard! Send it to your other device.');
-                    }).catch(err => {
-                        console.error('Clipboard error:', err);
-                        prompt('Copy this link:', link);
-                    });
+                    navigator.clipboard
+                        .writeText(link)
+                        .then(() => {
+                            alert('Magic Link copied to clipboard! Send it to your other device.');
+                        })
+                        .catch((err) => {
+                            console.error('Clipboard error:', err);
+                            prompt('Copy this link:', link);
+                        });
                 }
             } catch (e) {
                 alert('Invalid configuration found.');
@@ -207,13 +207,13 @@ export function initializeFirebaseSettingsUI() {
                 if (cleaned.endsWith(';')) {
                     cleaned = cleaned.slice(0, -1);
                 }
-                
+
                 // Convert JS Object format to JSON format
                 const jsonReady = cleaned
                     .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":') // Wrap keys in double quotes
                     .replace(/:\s*'([^']*)'/g, ': "$1"') // Replace single-quoted values with double quotes
                     .replace(/,\s*([}\]])/g, '$1'); // Remove trailing commas
-                
+
                 const config = JSON.parse(jsonReady);
                 saveFirebaseConfig(config);
                 alert('Configuration saved. Reloading...');
@@ -228,7 +228,11 @@ export function initializeFirebaseSettingsUI() {
     // Clear Button
     if (clearFirebaseConfigBtn) {
         clearFirebaseConfigBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to remove the custom configuration? The app will revert to the shared default database.')) {
+            if (
+                confirm(
+                    'Are you sure you want to remove the custom configuration? The app will revert to the shared default database.'
+                )
+            ) {
                 clearFirebaseConfig();
                 window.location.reload();
             }
