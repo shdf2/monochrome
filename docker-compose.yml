@@ -5,23 +5,11 @@ services:
             context: .
             dockerfile: Dockerfile
         container_name: monochrome
+        ports:
+            - '${MONOCHROME_PORT:-3000}:4173'
         restart: unless-stopped
-
-        # ⛔️ pas de ports publish avec Traefik
-        # ports:
-        #   - '${MONOCHROME_PORT:-3000}:4173'
-
         networks:
-            - proxy
             - monochrome-network
-
-        labels:
-            - 'traefik.enable=true'
-            - 'traefik.http.routers.monochrome.rule=Host(`monochrome.zpl.ovh`)'
-            - 'traefik.http.routers.monochrome.entrypoints=websecure'
-            - 'traefik.http.routers.monochrome.tls.certresolver=myresolver'
-            - 'traefik.http.services.monochrome.loadbalancer.server.port=4173'
-
         healthcheck:
             test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:4173/']
             interval: 30s
@@ -40,34 +28,21 @@ services:
             PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-admin@example.com}
             PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-changeme}
             TZ: ${TZ:-UTC}
-
-        # ⛔️ pas de ports publish avec Traefik (optionnel)
-        # ports:
-        #   - '${POCKETBASE_PORT:-8090}:8090'
-
+        ports:
+            - '${POCKETBASE_PORT:-8090}:8090'
         volumes:
             - pb_data:/pb_data
             - pb_public:/pb_public
             - pb_hooks:/pb_hooks
         command: serve --http=0.0.0.0:8090
-
-        networks:
-            - proxy
-            - monochrome-network
-
-        labels:
-            - 'traefik.enable=true'
-            - 'traefik.http.routers.monochrome-pb.rule=Host(`pb.monochrome.zpl.ovh`)'
-            - 'traefik.http.routers.monochrome-pb.entrypoints=websecure'
-            - 'traefik.http.routers.monochrome-pb.tls.certresolver=myresolver'
-            - 'traefik.http.services.monochrome-pb.loadbalancer.server.port=8090'
-
         healthcheck:
             test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:8090/api/health']
             interval: 30s
             timeout: 10s
             retries: 3
             start_period: 30s
+        networks:
+            - monochrome-network
 
     # Development server -- only starts with: docker compose --profile dev up -d
     monochrome-dev:
@@ -77,11 +52,8 @@ services:
         container_name: monochrome-dev
         profiles:
             - dev
-
-        # ⛔️ pas de ports publish avec Traefik (tu peux les remettre si tu veux en local)
-        # ports:
-        #   - '${MONOCHROME_DEV_PORT:-5173}:5173'
-
+        ports:
+            - '${MONOCHROME_DEV_PORT:-5173}:5173'
         volumes:
             - .:/app
             - /app/node_modules
@@ -90,8 +62,6 @@ services:
             - monochrome-network
 
 networks:
-    proxy:
-        external: true
     monochrome-network:
         driver: bridge
 
