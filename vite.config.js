@@ -32,8 +32,7 @@ export default defineConfig({
                         },
                     },
                     {
-                        urlPattern: ({ request }) =>
-                            request.destination === 'audio' || request.destination === 'video',
+                        urlPattern: ({ request }) => request.destination === 'audio' || request.destination === 'video',
                         handler: 'CacheFirst',
                         options: {
                             cacheName: 'media',
