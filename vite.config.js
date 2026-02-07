@@ -7,6 +7,11 @@ export default defineConfig({
         outDir: 'dist',
         emptyOutDir: true,
     },
+    preview: {
+        host: '0.0.0.0',
+        port: 4173,
+        allowedHosts: ['monochrome.zpl.ovh'],
+    },
     plugins: [
         VitePWA({
             registerType: 'prompt',
@@ -27,7 +32,8 @@ export default defineConfig({
                         },
                     },
                     {
-                        urlPattern: ({ request }) => request.destination === 'audio' || request.destination === 'video',
+                        urlPattern: ({ request }) =>
+                            request.destination === 'audio' || request.destination === 'video',
                         handler: 'CacheFirst',
                         options: {
                             cacheName: 'media',
